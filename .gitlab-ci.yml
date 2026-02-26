@@ -1,0 +1,86 @@
+stages:
+  - validate
+  - deploy
+  - build
+  - deploy_app
+
+variables:
+  TERRAFORM_VERSION: "1.5.0"
+  GCP_PROJECT_ID: "bcatest1"
+  GCP_REGION: "asia-southeast2"
+  ENVIRONMENT: "prod"
+
+validate:
+  stage: validate
+  image: hashicorp/terraform:$TERRAFORM_VERSION
+  script:
+    - cd env/prod
+    - terraform init -backend=false
+    - terraform validate
+    - terraform fmt -check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+deploy_terraform:
+  stage: deploy
+  image: hashicorp/terraform:$TERRAFORM_VERSION
+  before_script:
+    - echo $GCP_SERVICE_ACCOUNT_KEY | base64 -d > /tmp/gcp-key.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
+  script:
+    - cd env/prod
+    - terraform init
+    - terraform plan -var-file="prod.tfvars" -out=tfplan
+    - terraform apply -auto-approve tfplan
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+build_image:
+  stage: build
+  image: google/cloud-sdk:alpine
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo $GCP_SERVICE_ACCOUNT_KEY | base64 -d > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+    - gcloud auth configure-docker $GCP_REGION-docker.pkg.dev
+  script:
+    - cd src
+    - IMAGE_TAG="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/myapp-prod/app:$CI_COMMIT_SHA"
+    - IMAGE_LATEST="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/myapp-prod/app:latest"
+    - docker build -t $IMAGE_TAG -f Dockerfile .
+    - docker tag $IMAGE_TAG $IMAGE_LATEST
+    - docker push $IMAGE_TAG
+    - docker push $IMAGE_LATEST
+  needs: ["deploy_terraform"]
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+deploy_cloudrun:
+  stage: deploy_app
+  image: google/cloud-sdk:alpine
+  before_script:
+    - echo $GCP_SERVICE_ACCOUNT_KEY | base64 -d > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+  script:
+    - IMAGE_LATEST="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/myapp-prod/app:latest"
+    - |
+      gcloud run deploy myapp-prod \
+        --image $IMAGE_LATEST \
+        --region $GCP_REGION \
+        --set-env-vars DB_USER="myapp-prod-sa@project-prod.iam",DB_NAME="appdb",INSTANCE_CONNECTION_NAME="project-prod:asia-southeast2:myapp-postgresql-prod-replica",DB_QUERY="SELECT * FROM myapp LIMIT 1"
+  needs: ["build_image"]
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
