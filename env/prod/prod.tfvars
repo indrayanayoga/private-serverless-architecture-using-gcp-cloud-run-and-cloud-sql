@@ -5,8 +5,6 @@ app_name   = "myapp-prod"
 
 # Network
 vpc_name          = "myapp-prod-vpc"
-subnet_name       = "myapp-prod-subnet"
-subnet_cidr       = "10.2.0.0/24"
 enable_psa        = true
 psa_range_name    = "myapp-prod-psa"
 psa_prefix_length = 16

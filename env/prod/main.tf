@@ -80,12 +80,7 @@ module "network" {
   region     = var.region
   vpc_name   = var.vpc_name
 
-  subnets = {
-  (var.subnet_name) = {
-    cidr   = var.subnet_cidr
-    region = var.region
-  }
-  }
+  subnets = {}
 
   enable_psa        = var.enable_psa
   psa_range_name    = var.psa_range_name
