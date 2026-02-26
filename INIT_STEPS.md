@@ -12,7 +12,7 @@ Create projects for Dev, Staging, and Prod environments.
 
 ```bash
 gcloud services enable storage.googleapis.com
-gcloud storage buckets create gs://central-project-terraform-states --project=project-prod --location=asia-southeast2
+gcloud storage buckets create gs://central-project-terraform-states --project=central-project --location=asia-southeast2
 gcloud storage buckets update gs://central-project-terraform-states --versioning
 ```
 
