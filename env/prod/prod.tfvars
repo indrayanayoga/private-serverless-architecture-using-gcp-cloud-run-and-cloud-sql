@@ -1,5 +1,5 @@
 # Core
-project_id = "bcatest1"
+project_id = "project-prod"
 region     = "asia-southeast2"
 app_name   = "myapp-prod"
 
