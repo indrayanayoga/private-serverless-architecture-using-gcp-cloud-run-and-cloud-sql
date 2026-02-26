@@ -73,6 +73,9 @@ used so that certificates are not stored or supplied from Git (including
 Terraform/GitLab CI files), and instead are stored in a dedicated and
 secure place.
 
+LB is routed to Cloud Run via Serverless NEG (Network Endpoint Group), as 
+Cloud Run belongs to Google's serverless endpoints.
+
 Cloud Armor is used for extra security, including: - Stopping SQL
 Injection (implemented using pre-configured WAF rules) - Implementing IP
 rate-limiting
