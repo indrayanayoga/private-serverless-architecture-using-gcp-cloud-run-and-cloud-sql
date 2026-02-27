@@ -194,7 +194,8 @@ unless it runs in the same VPC.
 
 Therefore, the initial database setup (create table, grant access) must
 be done manually via Cloud SQL Studio, with instructions documented in
-manual_setup.md.
+INIT_STEPS.md.
 
 An alternative would be running the database script via a temporary
 bastion host, which is feasible but adds complexity.
+
